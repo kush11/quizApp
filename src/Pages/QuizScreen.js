@@ -1,59 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import {
-  View,
-  Text,
   StyleSheet,
   SafeAreaView,
-  TouchableOpacity,
-  ScrollView,
+  Dimensions
 } from 'react-native';
-
+import * as Progress from 'react-native-progress';
+import ScoreScreen from '../Components/Result'
+import Question from '../Components/Question'
+import questions from '../Utils/question.json'
 export default function QuizScreen() {
 
-  const questions = [
-    {
-      question: 'This is first Question with long This is first Question with long This is first Question with long',
-      correctAnswer: 'option1',
-      Options: {
-        option1: 'option1',
-        option2: 'option2',
-        option3: 'option3',
-        option4: 'option4',
-        option5: 'option4',
-        option6: 'option1',
-        option7: 'option2',
-        option8: 'option3',
-        option9: 'option4',
-        option10: 'option4',
-        option11: 'option1',
-        option12: 'option2',
-        option13: 'option3',
-        option14: 'option4',
-        option15: 'option4'
-
-      },
-    },
-    {
-      question: 'This is Second Option',
-      correctAnswer: 'option1',
-      Options: {
-        option1: 'option1',
-        option2: 'option2',
-        option3: 'option3',
-        option4: 'option4',
-      },
-    },
-    {
-      question: 'This is Third  Option',
-      correctAnswer: 'option1',
-      Options: {
-        option1: 'option1',
-        option2: 'option2',
-        option3: 'option3',
-        option4: 'option4',
-      },
-    },
-  ];
+  const windowWidth = Dimensions.get('window').width
 
   const [questionCounter, setQuestionCounter] = useState(0)
   const [currentQuestion, setCurrentQuestion] = useState(questions[0])
@@ -61,78 +18,80 @@ export default function QuizScreen() {
 
   const [allquestions, setAllQuestions] = useState(questions)
 
+  const [indeterminate, setIndeterminate] = useState(false)
+  const [progressBar, setProgress] = useState(0.10)
+
+  let progressBarTimer;
+  let progressBaxInterval;
+
+  useEffect(() => {
+    let progress = 0.10
+    progressBarTimer = setTimeout(() => {
+      setIndeterminate(false)
+      progressBaxInterval = setInterval(() => {
+        progress += 0.10;
+        if (progress > 1) {
+          progress = 1;
+        }
+        console.log(progress)
+        setProgress(progress)
+      }, 1100);
+    }, 5000);
+  }, [currentQuestion])
+
+  let oneMinutTimer;
+  const minutTime = 10000;
+
+  useEffect(() => {
+    oneMinutTimer = setTimeout(() => {
+      answerFun('unanswered', '')
+    }, minutTime)
+  }, [questionCounter])
 
 
+  const calculateAnswer = (choice, index) => {
+    console.log('choice', choice)
+    console.log('index', index)
+    if (choice !== 'unanswered') {
+      allquestions[questionCounter].correctAnswer === choice && setCorrectAnswerCount(correctAnswerCount + 1)
+    }
+  }
 
   const answerFun = (choice, index) => {
-    console.log('index=>', index)
-    console.log('choice=>', choice)
-    console.log('allquestions.length=>', allquestions.length)
-    if (correctAnswerCount === allquestions.length) {
+    calculateAnswer(choice, index)
+    if (questionCounter === allquestions.length) {
       console.log('all done')
+      clearInterval(oneMinutTimer);
     }
     else {
       setTimeout(() => {
-        setCorrectAnswerCount(correctAnswerCount + 1)
-        setCurrentQuestion(allquestions[correctAnswerCount])
+        setQuestionCounter(questionCounter + 1)
+        setCurrentQuestion(questionCounter ? allquestions[questionCounter] : allquestions[questionCounter + 1])
+        clearTimeout(progressBarTimer)
+        setProgress(0.10)
+        setIndeterminate(false)
+        clearInterval(progressBaxInterval)
       }, 5000)
     }
   }
 
-  const QuestionOption = ({ options }) => {
-    return Object.keys(options).map((option, index) => (
-      <>
-        <View key={index * 10} style={{ padding: 10 }}>
-          <TouchableOpacity onPress={() => answerFun(options[option], index)}
-            style={{
-              flexDirection: 'row',
-              padding: 10,
-              backgroundColor: '#f0f8ff',
-              borderRadius: 10,
-            }}>
-            <View style={{}}>
-              <Text>
-                Option {index + 1}
-                {':'}{' '}
-              </Text>
-            </View>
-            <Text>{options[option]}</Text>
-          </TouchableOpacity>
-        </View>
-      </>
-    ));
-  };
-
-  const QuestionHeader = () => {
-    return (
-      <View>
-        <Text style={{ textAlign: 'right', right: 10 }}>{correctAnswerCount}/{allquestions.length} </Text>
-      </View>
-    )
-  }
-
-  const Question = () => {
-    return (
-      <View
-        style={{
-          width: '100%',
-          backgroundColor: 'gray',
-          padding: 10,
-          borderWidth: 1,
-          borderRadius: 10,
-        }}>
-        <QuestionHeader />
-        <Text style={{ textAlign: 'center' }}>{currentQuestion.question || ''}</Text>
-        <ScrollView>
-          <QuestionOption options={currentQuestion.Options || ''} />
-        </ScrollView>
-      </View>
-    );
-  };
-
   return (
     <SafeAreaView style={styles.questionContainer}>
-      <Question question={'This is first Question'} />
+      {allquestions.length > questionCounter ?
+        <>
+          <Progress.Bar
+            width={windowWidth - 20}
+            progress={progressBar}
+            indeterminate={indeterminate}
+          />
+          <Question
+            currentQuestion={currentQuestion.question}
+            questionCounter={questionCounter}
+            allquestionsLen={allquestions.length}
+            options={currentQuestion.Options || ''}
+            answerFun={(option, index) => answerFun(option, index)}
+          />
+        </> : <ScoreScreen score={correctAnswerCount} />}
     </SafeAreaView>
   );
 }
@@ -141,7 +100,6 @@ const styles = StyleSheet.create({
   questionContainer: {
     display: 'flex',
     flex: 1,
-    padding: 10,
-
+    padding: 10
   },
 });
